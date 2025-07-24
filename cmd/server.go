@@ -10,6 +10,7 @@ import (
 )
 
 func main() {
+	// Local UDP socket. Listen to any IP and port 6969
 	udpConn, err := net.ListenUDP("udp4", &net.UDPAddr{Port: 6969})
 
 	if err != nil {
@@ -18,7 +19,15 @@ func main() {
 
 	tr := quic.Transport{Conn: udpConn}
 
-	ln, err := tr.Listen(&tls.Config{}, &quic.Config{})
+	cert, err := tls.LoadX509KeyPair("tls/server.crt", "tls/server.key")
+
+	if err != nil {
+		log.Fatalln("Error loading TLS certificate:", err)
+	}
+
+	ln, err := tr.Listen(&tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}, &quic.Config{})
 
 	if err != nil {
 		log.Fatalln("Error starting QUIC listener:", err)
@@ -27,6 +36,7 @@ func main() {
 	log.Println("QUIC server is listening on", ln.Addr())
 
 	for {
+		// Infinite loop to accept new connections
 		conn, err := ln.Accept(context.Background())
 		log.Println("Accepted new connection from", conn.RemoteAddr())
 
@@ -34,19 +44,22 @@ func main() {
 			log.Println("Error accepting connection:", err)
 			continue
 		}
+		
+		str, err := conn.AcceptStream(conn.Context())
 
+		if err != nil {
+			log.Println("Error accepting stream:", err)
+			continue
+		}
+		log.Println("Accepted new stream from", str.StreamID())
+
+		// The stream is handled in a goroutine
 		go func() {
-			str, err := conn.AcceptStream(context.Background())
 			defer str.Close()
-
-			if err != nil {
-				log.Println("Error accepting stream:", err)
-				return
-			}
 
 			str.Write([]byte("Hello from QUIC server!"))
 
-			var buf []byte
+			buf := make([]byte, 1024)
 			n, err := str.Read(buf)
 
 			if err != nil {
