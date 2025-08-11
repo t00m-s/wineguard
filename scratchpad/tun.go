@@ -1,4 +1,4 @@
-package main
+package scratchpad
 
 import (
 	"log"
@@ -14,13 +14,13 @@ type protocolNum int
 
 const (
 	icmpv4 protocolNum = 1
-	icmpv6             = 58
+	icmpv6 protocolNum = 58
 )
 
 // Simple TUN test
 // (in terminal 1:)
 //
-//	sudo go run ./cmd/tun.go
+//	sudo go run ./scratchpad/tun.go
 //
 // (in terminal 2:)
 //
